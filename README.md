@@ -75,7 +75,7 @@ If you haven’t used tinyurl.com before, please try creating a new shortened UR
 ```yaml
 {
   status: false,
-  message: ""
+  message: "url not found"
 }
 ```
 ## Response samples
