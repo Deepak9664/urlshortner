@@ -40,17 +40,12 @@ const createShortUrl = async function(req, res){
         const longUrl = data.longUrl
         if(!longUrl) return res.status(400).send({ status: false, message: "longURL is Mandatory" })
 
-        if (! isValid(longUrl)){    
+        const regex = /^(?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/
+        if(!regex.test(longUrl)) return res.status(400).send({ status: false, message: "Not A Valid URL , Plz Provide valid long URL" })
+        
+        if (! isValid(longUrl) || !validUrl.isUri(longUrl)){    // validUrl.isUri returns (String) = undefine / longUrl
             return res.status(400).send({ status: false, message: "Not A Valid URL , Plz Provide valid long URL" })
         }
-        if (!validUrl.isUri(longUrl)){    
-            return res.status(400).send({ status: false, message: "Not A Valid URL , Plz Provide valid long URL" })
-        }
-        const cachedata = await GET_ASYNC(`${longUrl}`)
-        if (cachedata) {
-            return res.status(200).send({ status: true, message: "longurl from cache", data:JSON.parse(cachedata) })
-        }
-
         // .......checking in redis...........
 
         const checkInRedis = await GET_ASYNC(`${longUrl}`)
@@ -74,7 +69,7 @@ const createShortUrl = async function(req, res){
              shortUrl: savedData.shortUrl, 
              urlCode: savedData.urlCode 
         }
-        await SET_ASYNC(`${longUrl}`,JSON.stringify(responsedata))
+        await SET_ASYNC(`${longUrl}`, JSON.stringify(responsedata))
         return res.status(201).send({ status: true, message: "Data Created", data: responsedata })
     }
     catch (err) {
