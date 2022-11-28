@@ -1,6 +1,7 @@
 const urlModel = require('../models/urlModel')
 const shortId = require('shortid')
 const validUrl = require('valid-url');
+const axios = require('axios')
 const redis = require('redis')
 
 const { promisify } = require("util");
@@ -39,9 +40,6 @@ const createShortUrl = async function(req, res){
 
         const longUrl = data.longUrl
         if(!longUrl) return res.status(400).send({ status: false, message: "longURL is Mandatory" })
-
-        const regex = /^(?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/
-        if(!regex.test(longUrl)) return res.status(400).send({ status: false, message: "Not A Valid URL , Plz Provide valid long URL" })
         
         if (! isValid(longUrl) || !validUrl.isUri(longUrl)){    // validUrl.isUri returns (String) = undefine / longUrl
             return res.status(400).send({ status: false, message: "Not A Valid URL , Plz Provide valid long URL" })
@@ -49,14 +47,21 @@ const createShortUrl = async function(req, res){
         // .......checking in redis...........
 
         const checkInRedis = await GET_ASYNC(`${longUrl}`)
-        if(checkInRedis) return res.status(200).send({ status: true, message: "URL Already Present in cache", data:JSON.parse(checkInRedis)})
+        if(checkInRedis) return res.status(200).send({ status: true, message: "URL Already Present in Cache", data:JSON.parse(checkInRedis)})
 
         const urlPresent = await urlModel.findOne({ longUrl: longUrl }).select({ longUrl: 1, shortUrl: 1, urlCode: 1, _id: 0 })
         if (urlPresent){
-            //  await SET_ASYNC(`${longUrl}`, JSON.stringify(longUrl))
-            return res.status(200).send({ status: true, message: "URL Already Present and cached", data: urlPresent })
+            return res.status(200).send({ status: true, message: "URL Already Present DataBase", data: urlPresent })
         }
-        const urlCode = shortId.generate()
+
+        let checkUrlByaxios = await axios.get(longUrl)
+            .then(() => true)
+            .catch((err) => false)
+
+        if(!checkUrlByaxios) return res.status(400).send({ status: false, message: "Not A Valid URL , Plz Provide valid long URL." })
+
+        const urlCode = shortId.generate().toLowerCase();
+
         const shortUrl = "http://localhost:3000/"+urlCode
         
         data["urlCode"] = urlCode
@@ -76,6 +81,7 @@ const createShortUrl = async function(req, res){
         return res.status(500).send({ status: false, Error: err.message })
     }
 }
+
 
 
 
